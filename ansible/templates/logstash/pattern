@@ -1,0 +1,2 @@
+HTTPUSERNAME [a-zA-Z\.\@\-\+_%]+
+HTTPUSER %{HTTPUSERNAME}

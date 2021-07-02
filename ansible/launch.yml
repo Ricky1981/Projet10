@@ -1,0 +1,20 @@
+---
+- name: Bastion / Configuration
+  import_playbook: 01-bastion.yml
+
+- name: Nodes / Configuration
+  import_playbook: userNode.yml
+
+- name: Apache / PHP Installation
+  import_playbook: install.yml
+
+- name: Apache / WordPress Configuration
+  import_playbook: conf.yml
+
+- name: MetricBeat
+  import_playbook: metricbeat.yml
+
+- name: FileBeat
+  import_playbook: filebeat.yml
+
+

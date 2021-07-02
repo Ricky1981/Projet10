@@ -1,0 +1,70 @@
+---
+- name: installing and launching filebeat
+  hosts: ec2
+  become: yes
+  tasks:
+
+  - name: download filebeat deb
+    command: curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-7.9.1-amd64.deb
+
+  - name: install filebeat deb
+    command: dpkg -i filebeat-oss-7.9.1-amd64.deb
+
+  - name: drop in filebeat.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat-config.yml
+      dest: /etc/filebeat/filebeat.yml
+
+  - name: enable and configure apache module
+    command: filebeat modules enable apache
+
+  - name: drop geoip in /usr/share/filebeat/module/apache/access/ingest/pipeline.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat_/accesspipeline
+      dest: /usr/share/filebeat/module/apache/access/ingest/pipeline.yml
+
+  - name: drop geoip in /usr/share/filebeat/module/apache/access/manifest.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat_/manifest
+      dest: /usr/share/filebeat/module/apache/access/manifest.yml
+      
+  - name: drop geoip in /usr/share/filebeat/module/apache/error/ingest/pipeline.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat_/errorpipeline
+      dest: /usr/share/filebeat/module/apache/error/ingest/pipeline.yml
+
+  - name: drop geoip in /usr/share/filebeat/module/system/auth/ingest/pipeline.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat_/authpipeline
+      dest: /usr/share/filebeat/module/system/auth/ingest/pipeline.yml
+
+  - name: setup filebeat
+    command: filebeat setup --pipelines --index-management --dashboards -c /etc/filebeat/filebeat.yml
+    # mode debug
+    #filebeat setup -e --dashboards --pipelines --index-management
+    # pour voir si l'indice s'est bien créée :
+    #curl -XGET https://search-elk-3osl4sdpuov2rkyejqjmcq5r74.eu-west-3.es.amazonaws.com/_cat/indices
+
+
+# Si utilisation avec logstash, modifier  /etc/filebeat/filebeat.yml 
+#en commentant
+  #output.elasticsearch:
+  #hosts: ["https://search-elk-3osl4sdpuov2rkyejqjmcq5r74.eu-west-3.es.amazonaws.com:443"]
+# et en ajoutant :
+#   output.logstash:
+#         hosts: ["localhost:5044"]
+
+  - name: start filebeat service
+    command: service filebeat start
+
+  - systemd:
+      name: filebeat
+      enabled: yes
+      masked: no
+
+# metricbeat -e -d "*"
+# supprimer toutes les lignes contenant geoip des ficheirs :
+# vi /usr/share/filebeat/module/apache/access/ingest/pipeline.yml
+# vi /usr/share/filebeat/module/apache/access/manifest.yml 
+# vi /usr/share/filebeat/module/apache/error/ingest/pipeline.yml
+# vi /usr/share/filebeat/module/system/auth/ingest/pipeline.yml

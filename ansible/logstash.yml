@@ -1,0 +1,86 @@
+---
+- name: installing and launching filebeat
+  hosts: ec2
+  become: yes
+  tasks:
+
+  - name: jdk
+    command: apt -y install openjdk-13-jdk-headless
+
+  - name: download logstash deb
+    command: curl -L -O https://artifacts.elastic.co/downloads/logstash/logstash-oss-7.9.1.deb
+
+  - name: install logstash deb
+    command: dpkg -i logstash-oss-7.9.1.deb
+
+  - name: enable logstash
+    command: systemctl enable logstash  
+
+  - name: stop logstash
+    command: systemctl stop logstash
+
+  # Faire egalement les actions suivantes :
+    # vim /usr/share/logstash/logstash-core/lib/logstash/plugins/registry.rb
+    # Puis commenter la ligne suivante :
+    #   load_xpack unless LogStash::OSS
+
+#     Et dans /etc/logstash/conf.d/logstash.conf remplacer le input par :
+#      input {
+#   beats {
+#     port => 5044
+#   }
+# }
+
+
+
+  - name: ajout user logstash dans le groupe adm
+    command: usermod -aG adm logstash
+
+  # - name: to be able to authenticate using IAM, we should use the Amazon-ES Logstash Output Plugin
+  #   command: /usr/share/logstash/bin/logstash-plugin update
+
+  # - name: install Amazon ES Logstash Plugin
+  #   command: /usr/share/logstash/bin/logstash-plugin install logstash-output-amazon_es
+  
+  - name: creation fichier de pattern
+    command: mkdir /etc/logstash/pattern; chmod 755 -R /etc/logstash/pattern
+
+  - name: pattern apache
+    copy:
+      src: /home/vagrant/ansible/templates/logstash/pattern
+      dest: /etc/logstash/pattern/apache
+
+  # voir https://grokdebug.herokuapp.com/
+
+  - name: start logstash
+    command: systemctl start logstash
+
+  - name: drop in logstash.yml
+    copy:
+      src: /home/vagrant/ansible/templates/filebeat-config.yml
+      dest: /etc/filebeat/filebeat.yml
+
+  - name: enable and configure apache module
+    command: filebeat modules enable apache
+
+  - name: setup filebeat
+    command: filebeat setup --pipelines --index-management --dashboards -c /etc/filebeat/filebeat.yml
+    # mode debug
+    #filebeat setup -e --dashboards --pipelines --index-management
+    # pour voir si l'indice s'est bien créée :
+    #curl -XGET https://search-elk-3osl4sdpuov2rkyejqjmcq5r74.eu-west-3.es.amazonaws.com/_cat/indices
+
+  - name: start filebeat service
+    command: service filebeat start
+
+  - systemd:
+      name: filebeat
+      enabled: yes
+      masked: no
+
+# metricbeat -e -d "*"
+# supprimer toutes les lignes contenant geoip des ficheirs :
+# vi /usr/share/filebeat/module/apache/access/ingest/pipeline.yml
+# vi /usr/share/filebeat/module/apache/access/manifest.yml 
+# vi /usr/share/filebeat/module/apache/error/ingest/pipeline.yml
+# vi /usr/share/filebeat/module/system/auth/ingest/pipeline.yml
