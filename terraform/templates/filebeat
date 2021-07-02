@@ -1,0 +1,52 @@
+filebeat.inputs:
+- type: log
+  enabled: false
+  paths:
+    - /var/log/*.log
+
+filebeat.config.modules:
+  path: \$${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+setup.template.settings:
+  index.number_of_shards: 1
+
+setup.kibana:
+  host: \"https://${elastic}:443/_plugin/kibana/\"
+
+output.elasticsearch:
+  hosts: [\"https://${elastic}:443\"]
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+
+setup.ilm.enabled: false
+ilm.enabled: false
+
+setup.ilm.check_exists: false
+ilm.check_exists: false
+
+setup.template.overwrite: true
+template.overwrite: true
+
+setup.xpack.security.enabled: false
+setup.xpack.monitoring.enabled: false
+setup.xpack.graph.enabled: false
+setup.xpack.watcher.enabled: false
+setup.xpack.reporting.enabled: false
+setup.xpack.ml.enabled: false
+setup.LoadML.enabled: false
+
+xpack.security.enabled: false
+xpack.monitoring.enabled: false
+xpack.graph.enabled: false
+xpack.watcher.enabled: false
+xpack.reporting.enabled: false
+xpack.ml.enabled: false
+LoadML.enabled: false
+setup.pack.security.enabled: false
+setup.xpack.monitoring.enabled: false
